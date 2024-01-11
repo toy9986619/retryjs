@@ -1,0 +1,8 @@
+{
+  "name": "retryjs",
+  "version": "1.0.0",
+  "description": "A little utils for JavaScript retry",
+  "main": "index.js",
+  "repository": "https://github.com/toy9986619/retryjs.git",
+  "license": "MIT"
+}
