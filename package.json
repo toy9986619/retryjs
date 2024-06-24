@@ -1,11 +1,17 @@
 {
   "name": "retryjs",
   "version": "1.0.0",
-  "description": "A little utils for JavaScript retry",
-  "main": "index.js",
+  "description": "A little utils for JavaScript retry mechanism.",
+  "main": "lib/index.js",
+  "type": "module",
   "repository": "https://github.com/toy9986619/retryjs.git",
   "license": "MIT",
-  "dependencies": {
-    "lodash-es": "^4.17.21"
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@babel/preset-env": "^7.24.7",
+    "jest": "^29.7.0"
   }
 }
