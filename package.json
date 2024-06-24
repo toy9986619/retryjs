@@ -1,5 +1,5 @@
 {
-  "name": "retryjs",
+  "name": "@raynorlin/retry-js",
   "version": "1.0.0",
   "description": "A little utils for JavaScript retry mechanism.",
   "main": "lib/index.js",
