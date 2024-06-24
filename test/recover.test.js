@@ -75,7 +75,7 @@ describe('processAndRecover', () => {
     }
   });
 
-  it('process failed, recover failed, recover check failedtest', async () => {
+  it('process failed, recover failed, recover check failed test', async () => {
     try {
       const flowPromise = processAndRecover(async () => {
         throw new Error('test failed');
