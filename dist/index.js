@@ -1,0 +1,111 @@
+(function (global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+  typeof define === 'function' && define.amd ? define(['exports'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.RetryJs = {}));
+})(this, (function (exports) { 'use strict';
+
+  const subscribeRecovery = (processCallback = () => { }, recoverCheck = () => true, recoverOptions = {}) => {
+    const { recoverLimit = 3, recoverInterval = 3000 } = recoverOptions;
+
+    let recoverCount = 0;
+    let intervalId;
+
+    const promise = new Promise((resolve, reject) => {
+      let executeLock = false;
+      const recoverFlow = async () => {
+        if (executeLock) return;
+
+        executeLock = true;
+        recoverCount += 1;
+
+        try {
+          const result = await processCallback();
+          resolve(result);
+        } catch (error) {
+          let rejectValue;
+          const rejectWithValue = (value) => {
+            rejectValue = value;
+            return value;
+          };
+          const recoverCheckParams = { isRecovering: true, rejectWithValue };
+
+          if (recoverCount >= recoverLimit) {
+            reject(error);
+          }
+
+          let needRecover = false;
+          try {
+            needRecover = recoverCheck(error, recoverCheckParams);
+          } catch (recoverCheckError) {
+            rejectValue = recoverCheckError;
+          }
+
+          if (rejectValue !== undefined) {
+            reject(rejectValue);
+          } else if (!needRecover) {
+            reject(error);
+          }
+        } finally {
+          executeLock = false;
+        }
+      };
+
+      intervalId = setInterval(() => {
+        if (!executeLock) {
+          recoverFlow();
+        }
+      }, recoverInterval);
+    });
+
+    const finalPromise = promise.finally(() => {
+      clearInterval(intervalId);
+    });
+
+    return finalPromise;
+  };
+
+  const processAndRecover = async (
+    callback = () => { },
+    recoverCheck = () => true,
+    recoverOptions = {},
+  ) => {
+    const promise = new Promise((resolve, reject) => {
+      const processFlow = async () => {
+        try {
+          const result = await callback();
+          resolve(result);
+        } catch (error) {
+          let rejectValue;
+          const rejectWithValue = (value) => {
+            rejectValue = value;
+            return value;
+          };
+          const recoverCheckParams = { isRecovering: false, rejectWithValue };
+          const needRecover = recoverCheck(error, recoverCheckParams);
+
+          if (rejectValue !== undefined) {
+            reject(rejectValue);
+          } else if (needRecover) {
+            try {
+              const recoverPromiseResult = await subscribeRecovery(async () => {
+                const callbackResult = await callback();
+                return callbackResult;
+              }, recoverCheck, recoverOptions);
+              resolve(recoverPromiseResult);
+            } catch (recoverError) {
+              reject(recoverError);
+            }
+          } else {
+            reject(error);
+          }
+        }
+      };
+      processFlow();
+    });
+
+    return promise;
+  };
+
+  exports.processAndRecover = processAndRecover;
+
+}));
