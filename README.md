@@ -3,6 +3,8 @@
 A little Utils for JavaScript Retry Mechanism.
 Work with async function and Promise pattern.
 
+Support ES Module and CommonJS.
+
 ## Installation
 
 ```bash
@@ -10,6 +12,8 @@ npm install @raynorlin/retry-js
 ```
 
 ## Usage
+
+### ES Module
 
 ```javascript
 import { processAndRecover } from '@raynorlin/retry-js';
@@ -46,9 +50,17 @@ try {
 }
 ```
 
-### API
+### Common JS
 
-#### processAndRecover
+```javascript
+const { processAndRecover } = require('@raynorlin/retry-js');
+
+// same use as ES Module
+```
+
+## API
+
+### processAndRecover
 
 ```javascript
 const promise = processAndRecover(callback, recoverCheck, recoverOptions);
@@ -61,3 +73,7 @@ const promise = processAndRecover(callback, recoverCheck, recoverOptions);
 - `recoverOptions`: `Object` - The options for retry mechanism.
   - `recoverLimit`: `Number` - The max retry times, default is `3`.
   - `recoverInterval`: `Number` - The interval time between each retry, default is `3000` ms. Please notice that the retry flow will not execute when the previous retry is not finished.
+
+#### Return
+
+- `promise`: `Promise` - The promise object. The promise will be resolved with the result of the async process function.
