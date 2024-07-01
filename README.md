@@ -58,6 +58,36 @@ const { processAndRecover } = require('@raynorlin/retry-js');
 // same use as ES Module
 ```
 
+## Retry Strategy
+
+### Interval
+
+The retry mechanism will set am interval timer and execute the async process function with a fixed interval time.
+When the previous retry is not finished, the next retry will not execute.
+
+```javascript
+const promise = processAndRecover(callback, recoverCheck, {
+  recoverLimit: 3,
+  strategy: 'interval',
+  recoverInterval: 3000,
+});
+```
+
+### Timeout
+
+The retry mechanism will set a timeout timer for the retry to execute the async process function, and increase the timeout with a factor when the previous retry is failed.
+When the previous retry is not finished, the next retry timer will not to be set.
+
+```javascript
+const promise = processAndRecover(callback, recoverCheck, {
+  recoverLimit: 3,
+  strategy: 'timeout',
+  startTimeout: 1000,
+  maxTimeout: 10000,
+  timeoutFactor: 2,
+});
+```
+
 ## API
 
 ### processAndRecover
@@ -72,8 +102,23 @@ const promise = processAndRecover(callback, recoverCheck, recoverOptions);
   - `rejectWithValue`: `Function` - The function to reject the promise with special value.
 - `recoverOptions`: `Object` - The options for retry mechanism.
   - `recoverLimit`: `Number` - The max retry times, default is `3`.
-  - `recoverInterval`: `Number` - The interval time between each retry, default is `3000` ms. Please notice that the retry flow will not execute when the previous retry is not finished.
+  - `strategy`: `String` - The retry strategy, default is `interval`. Support `interval` and `timeout`.
+  - `recoverInterval`: `Number` - Only support when strategy is `interval`. The interval time between each retry, default is `3000` ms. Please notice that the retry flow will not execute when the previous retry is not finished.
+  - `startTimeout`: `Number` - Only support when strategy is `timeout`. The timeout for the first retry, default is `1000` ms.
+  - `maxTimeout`: `Number` - Only support when strategy is `timeout`. The max timeout for the retry, default is `Infinity` ms.
+  - `timeoutFactor`: `Number` - Only support when strategy is `timeout`. The factor to increase the timeout, default is `2`.
 
 #### Return
 
 - `promise`: `Promise` - The promise object. The promise will be resolved with the result of the async process function.
+
+## Constants
+
+### RetryStrategy
+
+```javascript
+import { RETRY_STRATEGY } from '@raynorlin/retry-js';
+```
+
+- `RETRY_STRATEGY.INTERVAL`: `String` - The interval strategy.
+- `RETRY_STRATEGY.TIMEOUT`: `String` - The timeout strategy.
