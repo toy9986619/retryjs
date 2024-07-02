@@ -1,10 +1,23 @@
 'use strict';
 
+const RETRY_STRATEGY = {
+  INTERVAL: 'interval',
+  TIMEOUT: 'timeout',
+};
+
 const subscribeRecovery = (processCallback = () => { }, recoverCheck = () => true, recoverOptions = {}) => {
-  const { recoverLimit = 3, recoverInterval = 3000 } = recoverOptions;
+  const {
+    recoverLimit = 3,
+    recoverInterval = 3000,
+    strategy = RETRY_STRATEGY.INTERVAL,
+    startTimeout = 1000,
+    maxTimeout = Infinity,
+    timeoutFactor = 2,
+  } = recoverOptions;
 
   let recoverCount = 0;
   let intervalId;
+  let timeoutId;
 
   const promise = new Promise((resolve, reject) => {
     let executeLock = false;
@@ -17,6 +30,7 @@ const subscribeRecovery = (processCallback = () => { }, recoverCheck = () => tru
       try {
         const result = await processCallback();
         resolve(result);
+        return { isSuccess: true, result };
       } catch (error) {
         let rejectValue;
         const rejectWithValue = (value) => {
@@ -27,6 +41,7 @@ const subscribeRecovery = (processCallback = () => { }, recoverCheck = () => tru
 
         if (recoverCount >= recoverLimit) {
           reject(error);
+          return { isSuccess: false, error, needRecover: false };
         }
 
         let needRecover = false;
@@ -38,23 +53,43 @@ const subscribeRecovery = (processCallback = () => { }, recoverCheck = () => tru
 
         if (rejectValue !== undefined) {
           reject(rejectValue);
+          return { isSuccess: false, error: rejectValue, needRecover: false };
         } else if (!needRecover) {
           reject(error);
+          return { isSuccess: false, error, needRecover: false };
         }
+
+        return { isSuccess: false, error, needRecover: true };
       } finally {
         executeLock = false;
       }
     };
 
-    intervalId = setInterval(() => {
-      if (!executeLock) {
-        recoverFlow();
-      }
-    }, recoverInterval);
+    if (strategy === RETRY_STRATEGY.TIMEOUT) {
+      const subscribeRecoveryTimeout = () => {
+        const currentTimeout = Math.min(startTimeout * Math.pow(timeoutFactor, recoverCount), maxTimeout);
+        timeoutId = setTimeout(() => {
+          recoverFlow().then(({ isSuccess, needRecover }) => {
+            if (!isSuccess && needRecover) {
+              subscribeRecoveryTimeout();
+            }
+          });
+        }, currentTimeout);
+      };
+
+      subscribeRecoveryTimeout();
+    } else if (strategy === RETRY_STRATEGY.INTERVAL) {
+      intervalId = setInterval(() => {
+        if (!executeLock) {
+          recoverFlow();
+        }
+      }, recoverInterval);
+    }
   });
 
   const finalPromise = promise.finally(() => {
     clearInterval(intervalId);
+    clearTimeout(timeoutId);
   });
 
   return finalPromise;
@@ -102,4 +137,5 @@ const processAndRecover = async (
   return promise;
 };
 
+exports.RETRY_STRATEGY = RETRY_STRATEGY;
 exports.processAndRecover = processAndRecover;
